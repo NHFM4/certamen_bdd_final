@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>title</title>
+</head>
+<body>
+
+    <input id="ciudad">
+    <button onclick="consulta_simple()">Buscar</button>
+    <textarea id="dinamic_result"></textarea>
+
+    <script>
+
+        function verificar_respuesta(respuesta_json) {
+            if (respuesta_json.status != 200) {
+                alert(respuesta_json.data)
+                return
+            } else {
+                document.getElementById("dinamic_result").value = `${JSON.stringify(respuesta_json)}`
+            }
+
+        }
+
+        async function consulta_simple() {
+            const resp_ = await fetch("/api/dinamic_api", {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({"consulta": "ciudad", "data": document.getElementById("ciudad").value})
+            })
+
+            const resp_json = await resp_.json()
+            verificar_respuesta(resp_json)
+        }
+
+    </script>
+</body>
+</html>
