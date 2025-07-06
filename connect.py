@@ -64,7 +64,7 @@ def consultar_datos_del_producto(id_producto: str) -> dict:
     return {"status": 200, "data": list(resp_)}
 
 def consultar_pedidos_clientes(id_cliente: str):
-
+    
     try:
         resp_ = clientes.aggregate([
             {"$lookup": {"from": "pedidos", "localField": "_id", "foreignField": "cliente_id", "as": "pedidos_del_cliente"}},
@@ -78,3 +78,24 @@ def consultar_pedidos_clientes(id_cliente: str):
         return {"status": 000, "data": f"No se logro encontrar ningun pedido asociado al id: {id_cliente}"}
     
     return {"status": 200, "data": list(resp_)}
+
+def todos_clientes(arg_: str) -> dict:
+
+    try:
+        resp_ = list(clientes.find({}))
+    except:
+        print("ERROR: en busqueda por todos los clientes")
+        return {"status": 500, "data": "INTERNAL ERROR SERVER"}
+    
+    return {"status": 200, "data": resp_}
+
+# Alta paja modificar y agregar except, mejor un parametro invisible que no se ocupa
+def todos_pedidos(arg_: str) -> dict:
+
+    try:
+        resp_ = list(pedidos.find({}))
+    except:
+        print("ERROR: en busqueda por todos los pedidos")
+        return {"status": 500, "data": "INTERNAL ERROR SERVER"}
+    
+    return {"status": 200, "data": resp_ }

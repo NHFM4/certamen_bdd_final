@@ -9,7 +9,9 @@ diccionario_de_busquedas = {
     "ciudad": connect.busqueda_cliente_ciudad,
     "fecha": connect.busqueda_por_fecha,
     "producto": connect.consultar_datos_del_producto,
-    "total_pedidos_cliente": connect.consultar_pedidos_clientes
+    "total_pedidos_cliente": connect.consultar_pedidos_clientes,
+    "todos_clientes": connect.todos_clientes,
+    "todos_pedidos": connect.todos_pedidos
 }
 
 @app.route("/", methods=["GET"])

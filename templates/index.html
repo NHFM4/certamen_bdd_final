@@ -25,7 +25,7 @@
         async function consulta_simple() {
             const resp_ = await fetch("/api/dinamic_api", {
                 method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({"consulta": "ciudad", "data": document.getElementById("ciudad").value})
+                body: JSON.stringify({"consulta": "producto", "data": "P002"})
             })
 
             const resp_json = await resp_.json()
