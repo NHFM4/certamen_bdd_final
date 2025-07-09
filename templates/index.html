@@ -29,7 +29,7 @@
         <button type="submit">Consultar</button>
     </form>
 
-    <form id="formulario_general"></form>
+    <div class="form" id="formulario_general"></div>
 
     <h2>Resultado:</h2>
     <pre id="resultado"></pre>
@@ -70,8 +70,16 @@
                 alert(json_data_response.data)
                 return false
             }
-
+            
             return true
+        }
+
+        // Funcion encargada de mostrar el mensaje de "Operacion reealizada con exito"
+        function operacion_exito(consulta = "") {
+        
+            document.getElementById("formulario_general").innerHTML = `
+            La operación ${consulta.replace("_", " ")} se completó correctamente.`
+        
         }
 
         async function nuevo_cliente(add = false) {
@@ -105,6 +113,7 @@
                 return
             }
 
+            operacion_exito(consulta)
             realizarConsulta("todos_clientes")
 
         }
@@ -139,6 +148,7 @@
                 return
             }
 
+            operacion_exito(consulta)
             realizarConsulta("todos_productos")
         }
 
@@ -170,6 +180,7 @@
                 return
             }
 
+            operacion_exito(consulta)
             realizarConsulta("todos_pedidos")
         }
 
