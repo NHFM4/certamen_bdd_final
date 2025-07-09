@@ -74,20 +74,29 @@
             return true
         }
 
-        async function nuevo_cliente() {
+        async function nuevo_cliente(add = false) {
 
             let buffer_tmp_objet = {
                 "nombre": document.getElementById("nombre").value,
                 "telefono": document.getElementById("Telefono").value,
                 "email": document.getElementById("email").value,
                 "fecha": document.getElementById("fecha").value,
-                "direccion": document.getElementById("direccion").value
+                "direccion": document.getElementById("direccion").value,
+                "id": document.getElementById("_id").value
+            }
+
+            let consulta = ""
+            // Si es que mod es false, se modificara el producto, en caso contrario se creara uno nuevo
+            if (add) {
+                consulta = "agregar_cliente"
+            } else {
+                consulta = "modificar_cliente"
             }
 
             const response = await fetch('/api/modify_bdd', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"consulta": "agregar_cliente", "data": buffer_tmp_objet})
+                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
             });
 
             const response_json = await response.json()
@@ -100,18 +109,28 @@
 
         }
 
-        async function nuevo_producto() {
+        async function nuevo_producto(add = false) {
+
             let buffer_tmp_objet = {
                 "nombre": document.getElementById("nombre").value,
                 "precio": document.getElementById("precio").value,
                 "stock": document.getElementById("stock").value,
-                "estado": document.getElementById("estado").value
+                "estado": document.getElementById("estado").value,
+                "id": document.getElementById("_id").value
+            }
+
+            let consulta = ""
+
+            if (add) {
+                consulta = "agregar_producto"
+            } else {
+                consulta = "modificar_producto"
             }
 
             const response = await fetch('/api/modify_bdd', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"consulta": "agregar_producto", "data": buffer_tmp_objet})
+                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
             });
 
             const response_json = await response.json()
@@ -121,6 +140,37 @@
             }
 
             realizarConsulta("todos_productos")
+        }
+
+        async function nuevo_pedido(add = false) {
+            let buffer_tmp_objet = {
+                "codigo_cliente": document.getElementById("codigo_cliente").value,
+                "metodo_pago": document.getElementById("metodo_pago").value,
+                "fecha_pedido": document.getElementById("fecha_pedido").value,
+                "id": document.getElementById("_id").value
+            }
+
+            let consulta = ""
+
+            if (add) {
+                consulta = "agregar_pedido"
+            } else {
+                consulta = "modificar_pedido"
+            }
+
+            const response = await fetch('/api/modify_bdd', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
+            });
+
+            const response_json = await response.json()
+
+            if (!check_status_200(response_json)) {
+                return
+            }
+
+            realizarConsulta("todos_pedidos")
         }
 
         function load_client_edit(nombre, telefono, email, direccion, fecha, id, add = false) {
@@ -137,9 +187,9 @@
             `
 
             if (add) {
-                code += `<button onclick="nuevo_cliente()">Agregar Cliente</button>`
+                code += `<button onclick="nuevo_cliente(true)">Agregar Cliente</button>`
             } else {
-                code += `<button>Modificar Cliente</button>`
+                code += `<button onclick="nuevo_cliente(false)">Modificar Cliente</button>`
             }
 
             document.getElementById("formulario_general").innerHTML = code
@@ -156,16 +206,16 @@
             <input type="text" id="estado" value="${estado}" required><br>
             `
             if (add) {
-                code += `<button onclick="nuevo_producto()">Agregar Producto</button>`
+                code += `<button onclick="nuevo_producto(true)">Agregar Producto</button>`
             } else {
-                code += `<button>Modificar Producto</button>`
+                code += `<button onclick="nuevo_producto(false)">Modificar Producto</button>`
             }
         
             document.getElementById("formulario_general").innerHTML = code
 
         }
 
-        function load_pedido_edit(codigo_cliente, metodo_pago, fecha_pedido, id) {
+        function load_pedido_edit(codigo_cliente, metodo_pago, fecha_pedido, id, add = false) {
             let code = `
             <label>Datos del Pedido</label>
 
@@ -173,9 +223,14 @@
             <input type="text" id="codigo_cliente" value="${codigo_cliente}" required><br>
             <input type="text" id="metodo_pago" value="${metodo_pago}" required><br>
             <input type="text" id="fecha_pedido" value="${fecha_pedido}" required><br>
-
-            <button>Modificar Producto</button>
             `
+            
+            if (add) {
+                code += `<button onclick="nuevo_pedido(true)">Agregar Pedido</button>`
+            } else {
+                code += `<button onclick="nuevo_pedido(false)">Modificar Pedido</button>`
+            }
+        
             document.getElementById("formulario_general").innerHTML = code
 
         }
@@ -244,7 +299,7 @@
 
         });
 
-        async function realizarConsulta(tipo) {
+        async function realizarConsulta(tipo, return_ = false) {
             const response = await fetch('/api/dinamic_api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -257,6 +312,11 @@
 
             if (!check_status_200(result)) {
                 return
+            }
+
+            // En caso de necesitar retornar, retorna XD
+            if (return_) {
+                return result
             }
 
             let dinamic_ = "";
@@ -285,7 +345,7 @@
                 document.getElementById("resultado").innerHTML = `<button onclick="load_client_edit('', '', '', '', '', '', true)">Nuevo Cliente</button>`
             
             } else if (tipo == "todos_pedidos"){
-                document.getElementById("resultado").innerHTML = `<button>Nuevo Pedido</button>`
+                document.getElementById("resultado").innerHTML = `<button onclick="load_pedido_edit('', '', '', '', true)">Nuevo Pedido</button>`
 
             } else if (tipo == "todos_productos") {
                 document.getElementById("resultado").innerHTML = `<button onclick="load_product_edit('', '', '', '', '', true)">Nuevo Producto</button>`

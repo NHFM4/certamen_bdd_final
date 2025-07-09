@@ -24,11 +24,11 @@ diccionario_de_busquedas = {
 modify_bdd = {
     "agregar_cliente": connect.agregar_cliente,
     "agregar_producto": connect.agregar_producto,
-    "agregar_pedido": "",
+    "agregar_pedido": connect.agregar_pedido,
     
-    "modificar_cliente": "",
-    "modificar_producto": "",
-    "modificar_pedido": ""
+    "modificar_cliente": connect.modificar_cliente,
+    "modificar_producto": connect.modificar_producto,
+    "modificar_pedido": connect.modificar_pedido 
 }
 
 @app.route("/", methods=["GET"])
@@ -40,8 +40,6 @@ def modify_():
     parametros: dict = request.get_json()
 
     if any(connect.es_peligroso(x) for x in parametros.keys()) or any(connect.es_peligroso(x) for x in parametros.values()):
-        print("es peligroso")
-
         return {"status": 400, "data": "Estas utilizando caracteres no autorizados."}
 
     if "consulta" not in parametros or "data" not in parametros:
@@ -51,7 +49,7 @@ def modify_():
         return {"status": 500, "data": "El valor del parametro 'consulta' no existe como consulta."}
     
     resp_ = modify_bdd[parametros["consulta"]](parametros["data"])
-    
+
     return resp_
 
 @app.route("/api/dinamic_api", methods=["GET", "POST"])

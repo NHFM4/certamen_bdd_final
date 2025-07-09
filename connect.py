@@ -9,7 +9,7 @@ productos = bdd["productos"]
 
 no_permitido = r"'\"\\/<>(){}[];%*=$+|&`~#"
 
-########################################### Limpieza de campos
+######################################################## Limpieza de campos
 
 def es_peligroso(campo: str) -> bool:
 
@@ -21,9 +21,7 @@ def es_peligroso(campo: str) -> bool:
     
     return False
 
-########################################### 
-
-########################################### Requerimientos basicos
+######################################################## Requerimientos basicos
 
 def busqueda_cliente_ciudad(ciudad: str) -> dict:
     try:
@@ -55,7 +53,7 @@ def busqueda_por_fecha(fecha: str) -> dict:
 def consultar_datos_del_producto(id_producto: str) -> dict:
 
     try:
-        resp_ = list(productos.find_one({"_id": id_producto}, {"_id": 0}))
+        resp_ = list(productos.find({"_id": id_producto}, {"_id": 0}))
 
     except:
         print("ERROR: en busqueda por id de producto")
@@ -66,7 +64,7 @@ def consultar_datos_del_producto(id_producto: str) -> dict:
     
     return {"status": 200, "data": resp_}
 
-def consultar_pedidos_clientes(id_cliente: str):
+def consultar_pedidos_clientes(id_cliente: str) -> dict:
     
     try:
         resp_ = list(clientes.aggregate([
@@ -82,6 +80,8 @@ def consultar_pedidos_clientes(id_cliente: str):
         return {"status": 000, "data": f"No se logro encontrar ningun pedido asociado al id: {id_cliente}"}
     
     return {"status": 200, "data": resp_}
+
+######################################################## Consultas generales
 
 def todos_clientes() -> dict:
 
@@ -113,7 +113,9 @@ def todos_productos() -> dict:
     
     return {"status": 200, "data": resp_ }
 
-########################################################
+######################################################## Seccion de modificacion de bdd
+
+# Seccion de agregar
 
 def agregar_cliente(json_data: dict) -> dict:
 
@@ -167,7 +169,104 @@ def agregar_producto(json_data: dict) -> dict:
 
     return {"status": 200, "data": f"Producto {nombre} ingresado correctamente."}
 
-def eliminar_cliente_por_id(id):
+def agregar_pedido(json_data: dict) -> dict:
+
+    codigo_cliente = json_data["codigo_cliente"]
+    metodo_pago = json_data["metodo_pago"]
+    fecha_pedido = json_data["fecha_pedido"]
+
+    resp_ = todos_pedidos()
+    id_pedido = "PE00" + str(len(resp_["data"]) + 1)
+
+    try: 
+        pedidos.insert_one({
+            "_id": id_pedido,
+            "codigo_cliente": codigo_cliente,
+            "metodo_pago": metodo_pago,
+            "fecha_pedido": fecha_pedido
+        })
+
+    except:
+        print(f"ERROR: No se logro ingresar el pedido asociado al cliente: {codigo_cliente} correctamente")
+        return {"status": 500, "data": f"No se pudo agregar al nuevo pedido asociado al cliente {codigo_cliente}."}
+
+    return {"status": 200, "data": f"Pedido asociado al cliente {codigo_cliente} ingresado correctamente."}
+
+# Seccion de modificacion
+
+def modificar_cliente(json_data: dict) -> dict:
+
+    id_cliente = json_data["id"]
+    telefono = json_data["telefono"]
+    direccion = json_data["direccion"]
+    email = json_data["email"]
+    fecha_registro = json_data["fecha"]
+    nombre = json_data["nombre"]
+
+    try:
+
+        clientes.update_one({"_id": id_cliente}, {"$set": {
+            "nombre": nombre,
+            "email": email,
+            "fecha_registro": fecha_registro,
+            "direccion": direccion,
+            "Telefono": int(telefono)
+        }})
+
+    except:
+        print(f"ERROR: No se logro modificar el cliente: {nombre} correctamente")
+        return {"status": 500, "data": f"No se pudo modificar el cliente con nombre {nombre}."}
+
+    return {"status": 200, "data": f"Cliente {nombre} modificado correctamente."}
+
+def modificar_producto(json_data: dict) -> dict:
+
+    id_producto = json_data["id"]
+    nombre = json_data["nombre"]
+    precio = json_data["precio"]
+    stock = json_data["stock"]
+    estado = json_data["estado"]
+
+    try:
+
+        productos.update_one({"_id": id_producto}, {"$set": {
+            "nombre": nombre,
+            "precio": int(precio),
+            "stock": int(stock),
+            "estado": estado
+        }})
+
+    except:
+        print(f"ERROR: No se logro modificar el producto: {nombre} correctamente")
+        return {"status": 500, "data": f"No se pudo modificar el producto con nombre {nombre}."}
+
+    return {"status": 200, "data": f"Producto {nombre} modificado correctamente."}
+
+def modificar_pedido(json_data: dict) -> dict:
+
+    id_pedido = json_data["id"]
+    codigo_cliente = json_data["codigo_cliente"]
+    metodo_pago = json_data["metodo_pago"]
+    fecha_pedido = json_data["fecha_pedido"]
+
+    try: 
+        pedidos.update_one({"_id": id_pedido}, {"$set": {
+            "codigo_cliente": codigo_cliente,
+            "metodo_pago": metodo_pago,
+            "fecha_pedido": fecha_pedido
+        }})
+
+    except:
+        print(f"ERROR: No se logro modificar el pedido asociado al cliente: {codigo_cliente} correctamente")
+        return {"status": 500, "data": f"No se pudo modificar el pedido asociado al cliente {codigo_cliente}."}
+
+    return {"status": 200, "data": f"Pedido asociado al cliente {codigo_cliente} modificado correctamente."}
+
+    pass
+
+# Seccion de eliminacion
+
+def eliminar_cliente_por_id(id: str) -> dict:
     
     try:
         clientes.delete_one({"_id": id})
@@ -178,7 +277,7 @@ def eliminar_cliente_por_id(id):
 
     return {"status": 200, "data": f"Usuario con id {id} eliminado correctamente."}
 
-def eliminar_pedido_por_id(id):
+def eliminar_pedido_por_id(id: str) -> dict:
 
     try:
         pedidos.delete_one({"_id": id})
@@ -189,7 +288,7 @@ def eliminar_pedido_por_id(id):
 
     return {"status": 200, "data": f"Pedido con id {id} eliminado correctamente."}
 
-def eliminar_producto_por_id(id):
+def eliminar_producto_por_id(id: str) -> dict:
     
     try:
         productos.delete_one({"_id": id})
