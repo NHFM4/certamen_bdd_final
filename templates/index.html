@@ -1,37 +1,299 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <title>title</title>
+    <meta charset="UTF-8">
+    <title>Consultas Empresa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <h1>Consultas a la Base de Datos</h1>
 
-    <input id="ciudad">
-    <button onclick="consulta_simple()">Buscar</button>
-    <textarea id="dinamic_result"></textarea>
+    <button onclick="realizarConsulta('todos_clientes')">Todos los Clientes</button>
+    <button onclick="realizarConsulta('todos_pedidos')">Todos los Pedidos</button>
+    <button onclick="realizarConsulta('todos_productos')">Todos los Productos</button>
 
+
+    <form id="consulta-form">
+        <label for="consulta">Consulta por:</label>
+        <select id="consulta" name="consulta" required>
+            <option value="">-- Selecciona una opción --</option>
+            <option value="ciudad">Clientes por Ciudad</option>
+            <option value="fecha">Clientes por Fecha de Registro</option>
+            <option value="producto">Producto por ID</option>
+            <option value="total_pedidos_cliente">Pedidos del Cliente</option>
+        </select><br><br>
+
+        <label for="data">Dato:</label>
+        <input type="text" id="data" name="data"><br><br>
+
+        <button type="submit">Consultar</button>
+    </form>
+
+    <form id="formulario_general"></form>
+
+    <h2>Resultado:</h2>
+    <pre id="resultado"></pre>
     <script>
 
-        function verificar_respuesta(respuesta_json) {
-            if (respuesta_json.status != 200) {
-                alert(respuesta_json.data)
+        function mostrar_elementos(obj_en_for) {
+
+            let keys_ = Object.keys(obj_en_for)
+            let buffer_ = `<div class="targets">`
+
+            for (key of keys_) {
+
+                if (key == "_id") {
+                    buffer_ += `<input value="${obj_en_for[key]}" hidden>`
+                    continue
+                }
+                
+                if (typeof(obj_en_for[key]) == "object") {
+                    buffer_ += `${key}: <br><br>`
+
+                    for (pedido of obj_en_for[key]) {
+                        buffer_ += mostrar_elementos(pedido)
+                    }
+                    continue
+                }
+
+                buffer_ += `${key}: ${obj_en_for[key]}<br>`
+
+            }
+
+            buffer_ += `</div><br>`
+            return buffer_
+        }
+
+        function check_status_200(json_data_response) {
+
+            if (json_data_response.status != 200) {
+                alert(json_data_response.data)
+                return false
+            }
+
+            return true
+        }
+
+        async function nuevo_cliente() {
+
+            let buffer_tmp_objet = {
+                "nombre": document.getElementById("nombre").value,
+                "telefono": document.getElementById("Telefono").value,
+                "email": document.getElementById("email").value,
+                "fecha": document.getElementById("fecha").value,
+                "direccion": document.getElementById("direccion").value
+            }
+
+            const response = await fetch('/api/modify_bdd', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"consulta": "agregar_cliente", "data": buffer_tmp_objet})
+            });
+
+            const response_json = await response.json()
+
+            if (!check_status_200(response_json)) {
                 return
+            }
+
+            realizarConsulta("todos_clientes")
+
+        }
+
+        async function nuevo_producto() {
+            let buffer_tmp_objet = {
+                "nombre": document.getElementById("nombre").value,
+                "precio": document.getElementById("precio").value,
+                "stock": document.getElementById("stock").value,
+                "estado": document.getElementById("estado").value
+            }
+
+            const response = await fetch('/api/modify_bdd', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"consulta": "agregar_producto", "data": buffer_tmp_objet})
+            });
+
+            const response_json = await response.json()
+
+            if (!check_status_200(response_json)) {
+                return
+            }
+
+            realizarConsulta("todos_productos")
+        }
+
+        function load_client_edit(nombre, telefono, email, direccion, fecha, id, add = false) {
+
+            let code = `
+            <label>Datos del Cliente</label>
+
+            <input type="text" id="_id" value="${id}" hidden><br>
+            <input type="text" id="nombre" value="${nombre}" required><br>
+            <input type="text" id="Telefono" value="${telefono}" required><br>
+            <input type="text" id="email" value="${email}" required><br>
+            <input type="text" id="direccion" value="${direccion}" required><br>
+            <input type="text" id="fecha" value="${fecha}" required><br>
+            `
+
+            if (add) {
+                code += `<button onclick="nuevo_cliente()">Agregar Cliente</button>`
             } else {
-                document.getElementById("dinamic_result").value = `${JSON.stringify(respuesta_json)}`
+                code += `<button>Modificar Cliente</button>`
+            }
+
+            document.getElementById("formulario_general").innerHTML = code
+        }
+
+        function load_product_edit(nombre, precio, stock, estado, id, add = false) {
+            let code = `
+            <label>Datos del Producto</label>
+
+            <input type="text" id="_id" value="${id}" hidden><br>
+            <input type="text" id="nombre" value="${nombre}" required><br>
+            <input type="text" id="precio" value="${precio}" required><br>
+            <input type="text" id="stock" value="${stock}" required><br>
+            <input type="text" id="estado" value="${estado}" required><br>
+            `
+            if (add) {
+                code += `<button onclick="nuevo_producto()">Agregar Producto</button>`
+            } else {
+                code += `<button>Modificar Producto</button>`
+            }
+        
+            document.getElementById("formulario_general").innerHTML = code
+
+        }
+
+        function load_pedido_edit(codigo_cliente, metodo_pago, fecha_pedido, id) {
+            let code = `
+            <label>Datos del Pedido</label>
+
+            <input type="text" id="_id" value="${id}" hidden><br>
+            <input type="text" id="codigo_cliente" value="${codigo_cliente}" required><br>
+            <input type="text" id="metodo_pago" value="${metodo_pago}" required><br>
+            <input type="text" id="fecha_pedido" value="${fecha_pedido}" required><br>
+
+            <button>Modificar Producto</button>
+            `
+            document.getElementById("formulario_general").innerHTML = code
+
+        }
+
+        async function eliminar_por_id(id, tipo) {
+            const response = await fetch('/api/dinamic_api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ "consulta": `${tipo}_borrar`, "data": id})
+            })
+
+            const response_json = await response.json()
+
+            if (!check_status_200(response_json)) {
+                return
+            }
+
+            if (tipo == "cliente") {
+                realizarConsulta("todos_clientes")
+
+            } else if (tipo == "producto") {
+                realizarConsulta("todos_productos")
+
+            } else if (tipo == "pedido") {
+                realizarConsulta("todos_pedidos")
             }
 
         }
 
-        async function consulta_simple() {
-            const resp_ = await fetch("/api/dinamic_api", {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({"consulta": "producto", "data": "P002"})
-            })
+        document.getElementById('consulta-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const consulta = document.getElementById('consulta').value;
+            const data = document.getElementById('data').value.trim();
 
-            const resp_json = await resp_.json()
-            verificar_respuesta(resp_json)
+            if (!consulta) {
+                alert("Por favor selecciona un tipo de consulta.");
+                return;
+            }
+
+            if (['ciudad', 'fecha', 'producto', 'total_pedidos_cliente'].includes(consulta) && data === "") {
+                alert("Por favor ingresa un dato para la consulta seleccionada.");
+                return;
+            }
+
+            const response = await fetch('/api/dinamic_api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consulta, data })
+            });
+
+            const result = await response.json();
+            
+            // Zona nephtali
+
+            if (!check_status_200(result)) {
+                return
+            }
+
+            let buffer_tmp = ""
+            for (elem of result["data"]) {
+                buffer_tmp += mostrar_elementos(elem)
+            }
+
+            document.getElementById('resultado').innerHTML = buffer_tmp;
+            document.getElementById('data').value = ""
+
+        });
+
+        async function realizarConsulta(tipo) {
+            const response = await fetch('/api/dinamic_api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consulta: tipo, data: "" })
+            });
+
+            const result = await response.json();
+
+            // Zona de nephtali xd
+
+            if (!check_status_200(result)) {
+                return
+            }
+
+            let dinamic_ = "";
+            for (elem of result.data) {
+
+                dinamic_ += mostrar_elementos(elem)
+                console.log(elem)
+
+                if (tipo == "todos_clientes") {
+                    dinamic_ += `<button onclick="load_client_edit('${elem.nombre}', '${elem.Telefono}', '${elem.email}', '${elem.direccion}', '${elem.fecha_registro}', '${elem._id}')">Editar</button>`
+                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'cliente')">Eliminar</button>`
+                }
+
+                if (tipo == "todos_pedidos") {
+                    dinamic_ += `<button onclick="load_pedido_edit('${elem.codigo_cliente}', '${elem.metodo_pago}', '${elem.fecha_pedido}', '${elem._id}')">Editar</button>`
+                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'pedido')">Eliminar</button>`
+                }
+
+                if (tipo == "todos_productos") {
+                    dinamic_ += `<button onclick="load_product_edit('${elem.nombre}', '${elem.precio}', '${elem.stock}', '${elem.estado}', '${elem._id}')">Editar</button>`
+                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'producto')">Eliminar</button>`
+                }
+            }
+
+            if (tipo == "todos_clientes") {
+                document.getElementById("resultado").innerHTML = `<button onclick="load_client_edit('', '', '', '', '', '', true)">Nuevo Cliente</button>`
+            
+            } else if (tipo == "todos_pedidos"){
+                document.getElementById("resultado").innerHTML = `<button>Nuevo Pedido</button>`
+
+            } else if (tipo == "todos_productos") {
+                document.getElementById("resultado").innerHTML = `<button onclick="load_product_edit('', '', '', '', '', true)">Nuevo Producto</button>`
+            }
+
+
+            document.getElementById('resultado').innerHTML += dinamic_
+
         }
-
     </script>
 </body>
-</html>
