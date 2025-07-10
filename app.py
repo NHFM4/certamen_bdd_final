@@ -39,11 +39,11 @@ def main_():
 def modify_():
     parametros: dict = request.get_json()
 
-    if any(connect.es_peligroso(x) for x in parametros.keys()) or any(connect.es_peligroso(x) for x in parametros.values()):
-        return {"status": 400, "data": "Estas utilizando caracteres no autorizados."}
-
     if "consulta" not in parametros or "data" not in parametros:
         return {"status": 400, "data": "No estas enviando uno de los dos parametros con su respectivo valor."}
+
+    if any(connect.es_peligroso(x) for x in parametros.keys()) or any(connect.es_peligroso(x) for x in parametros["data"].values()):
+        return {"status": 400, "data": "Estas utilizando caracteres no autorizados."}
     
     if parametros["consulta"] not in modify_bdd:
         return {"status": 500, "data": "El valor del parametro 'consulta' no existe como consulta."}

@@ -1,4 +1,8 @@
 from pymongo import MongoClient
+from hashlib import md5
+from datetime import datetime
+import random
+
 
 connect = MongoClient("mongodb+srv://admin:admin@certamen.n0laby6.mongodb.net/?retryWrites=true&w=majority&appName=certamen")
 bdd = connect["empresa"]
@@ -16,10 +20,19 @@ def es_peligroso(campo: str) -> bool:
     for x in campo:
 
         if x in no_permitido:
-            print(x, True)
             return True
     
     return False
+
+def gen_id(lista: list) -> str:
+
+    try:
+        str_buffer = str(len(lista) + 1 + random.randint(1, 1000)) + str(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"))
+        return md5(str_buffer.encode("utf-8")).hexdigest()
+    
+    except:
+        return str(random.randint(len(lista), 1000))
+
 
 ######################################################## Requerimientos basicos
 
@@ -126,12 +139,12 @@ def agregar_cliente(json_data: dict) -> dict:
     nombre = json_data["nombre"]
 
     resp_ = todos_clientes()
-    id_cliente = "C00" + str(len(resp_["data"]) + 1)
+    id_cliente = "C00" + gen_id(resp_)
 
     try:
         clientes.insert_one({
             "_id": id_cliente, 
-            "Telefono": telefono, 
+            "Telefono": int(telefono), 
             "direccion": direccion, 
             "email": email, 
             "fecha_registro": fecha_registro,
@@ -152,7 +165,7 @@ def agregar_producto(json_data: dict) -> dict:
     estado = json_data["estado"]
 
     resp_ = todos_productos()
-    id_producto = "PD00" + str(len(resp_["data"]) + 1)
+    id_producto = "PD00" + gen_id(resp_)
 
     try: 
         productos.insert_one({
@@ -170,27 +183,77 @@ def agregar_producto(json_data: dict) -> dict:
     return {"status": 200, "data": f"Producto {nombre} ingresado correctamente."}
 
 def agregar_pedido(json_data: dict) -> dict:
+    
+    all_product = todos_productos()
+    cliente_existe = consultar_pedidos_clientes(json_data["codigo_cliente"])
+
+    if cliente_existe["status"] != 200:
+        return {"status": 400, "data": "No se puede asociar el pedido a un usario que no existe."}
 
     codigo_cliente = json_data["codigo_cliente"]
     metodo_pago = json_data["metodo_pago"]
     fecha_pedido = json_data["fecha_pedido"]
 
-    resp_ = todos_pedidos()
-    id_pedido = "PE00" + str(len(resp_["data"]) + 1)
 
-    try: 
-        pedidos.insert_one({
+    resp_ = todos_pedidos()
+    id_pedido = "PE00" + gen_id(resp_)
+
+    data_ = {
             "_id": id_pedido,
             "codigo_cliente": codigo_cliente,
             "metodo_pago": metodo_pago,
             "fecha_pedido": fecha_pedido
-        })
+        }
+    
+    try:
+        if "productos" in json_data:
+
+            for producto in all_product["data"]:
+                for producto_comprado in json_data["productos"]:
+                    if producto_comprado["codigo_producto"] == producto["_id"]:
+
+                        if producto_comprado["cantidad"] > producto["stock"]:
+                            return {"status": 400, "data": f"No hay suficente stock para comprar {producto_comprado['cantidad']} de {producto_comprado['nombre']}. Estado: {producto['estado']}"}
+                        
+                        if not modificar_stock(producto_comprado["codigo_producto"], producto_comprado["cantidad"]):
+                            return {"status": 500, "data": "Error, no se logro descontar el stock de la base de datos."}
+            
+
+            data_.setdefault("productos", json_data["productos"])
+            data_.setdefault("total_compra", 
+                sum([x["total_comprado"] for x in json_data["productos"]]))
+    
+    except:
+        print(f"ERROR: No se logro ingresar el pedido asociado al cliente: {codigo_cliente} correctamente. Esto es en zona de IF PRODUCTS")
+        return {"status": 500, "data": f"No se pudo agregar al nuevo pedido asociado al cliente {codigo_cliente} error interno."}
+        
+    try: 
+        pedidos.insert_one(data_)
 
     except:
         print(f"ERROR: No se logro ingresar el pedido asociado al cliente: {codigo_cliente} correctamente")
         return {"status": 500, "data": f"No se pudo agregar al nuevo pedido asociado al cliente {codigo_cliente}."}
 
     return {"status": 200, "data": f"Pedido asociado al cliente {codigo_cliente} ingresado correctamente."}
+
+def modificar_stock(id: str, cantidad: int) -> bool:
+
+    estado = "disponible"
+    try:
+        resp_ = productos.find_one({"_id": id})
+        stock = resp_["stock"] - cantidad
+
+        if stock == 0:
+            estado = "agotado"
+        
+        productos.update_one({"_id": id}, {"$set": {"stock": stock, "estado": estado}})
+    
+    except:
+        return False
+    
+    return True
+
+
 
 # Seccion de modificacion
 
@@ -261,8 +324,6 @@ def modificar_pedido(json_data: dict) -> dict:
         return {"status": 500, "data": f"No se pudo modificar el pedido asociado al cliente {codigo_cliente}."}
 
     return {"status": 200, "data": f"Pedido asociado al cliente {codigo_cliente} modificado correctamente."}
-
-    pass
 
 # Seccion de eliminacion
 

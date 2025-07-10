@@ -1,370 +1,475 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Consultas Empresa</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <title>Consultas Empresa</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Consultas a la Base de Datos</h1>
+  <h1>Consultas a la Base de Datos</h1>
 
+  <!-- Botonera horizontal -->
+  <div class="botonera">
     <button onclick="realizarConsulta('todos_clientes')">Todos los Clientes</button>
     <button onclick="realizarConsulta('todos_pedidos')">Todos los Pedidos</button>
     <button onclick="realizarConsulta('todos_productos')">Todos los Productos</button>
+  </div>
 
-
+  <!-- Consulta especifica -->
+  <div class="contenido-principal">
+  <!-- Columna izquierda -->
+  <div class="lado-izquierdo">
+    
+    <h2>Consultas Especificas</h2>
     <form id="consulta-form">
-        <label for="consulta">Consulta por:</label>
-        <select id="consulta" name="consulta" required>
-            <option value="">-- Selecciona una opción --</option>
-            <option value="ciudad">Clientes por Ciudad</option>
-            <option value="fecha">Clientes por Fecha de Registro</option>
-            <option value="producto">Producto por ID</option>
-            <option value="total_pedidos_cliente">Pedidos del Cliente</option>
-        </select><br><br>
+      <label for="consulta">Consulta por:</label>
+      <select id="consulta" name="consulta" required>
+        <option value="">-- Selecciona una opción --</option>
+        <option value="ciudad">Clientes por Ciudad</option>
+        <option value="fecha">Clientes por Fecha de Registro</option>
+        <option value="producto">Producto por ID</option>
+        <option value="total_pedidos_cliente">Pedidos del Cliente</option>
+      </select><br><br>
 
-        <label for="data">Dato:</label>
-        <input type="text" id="data" name="data"><br><br>
+      <label for="data">Dato:</label>
+      <input type="text" id="data" name="data"><br><br>
 
-        <button type="submit">Consultar</button>
+      <button type="submit">Consultar</button>
     </form>
 
-    <div class="form" id="formulario_general"></div>
+    <!-- Formulario de Agregar / Actualizar -->
+    <div class="formulario-box">
+      <h2>Agregar/Actualizar</h2>
+      <div id="formulario_general"></div>
+    </div>
+  </div>
 
-    <h2>Resultado:</h2>
-    <pre id="resultado"></pre>
-    <script>
+  <!-- Columna derecha de Resultados -->
+  <div class="lado-derecho">
+    <h2>Resultados</h2>
+    <div id="resultado"></div>
+  </div>
 
-        function mostrar_elementos(obj_en_for) {
+  </div>
 
-            let keys_ = Object.keys(obj_en_for)
-            let buffer_ = `<div class="targets">`
+  <script>
 
-            for (key of keys_) {
+    let todos_los_productos = ""
+    let cart_cliente = []
 
-                if (key == "_id") {
-                    buffer_ += `<input value="${obj_en_for[key]}" hidden>`
-                    continue
-                }
-                
-                if (typeof(obj_en_for[key]) == "object") {
-                    buffer_ += `${key}: <br><br>`
+    function mostrar_elementos(obj_en_for) {
+      let keys_ = Object.keys(obj_en_for)
+      let buffer_ = `<div class="targets">`
 
-                    for (pedido of obj_en_for[key]) {
-                        buffer_ += mostrar_elementos(pedido)
-                    }
-                    continue
-                }
-
-                buffer_ += `${key}: ${obj_en_for[key]}<br>`
-
-            }
-
-            buffer_ += `</div><br>`
-            return buffer_
+      for (key of keys_) {
+        if (key == "_id") {
+          //buffer_ += `<input value="${obj_en_for[key]}" hidden>`
+          //continue
         }
 
-        function check_status_200(json_data_response) {
-
-            if (json_data_response.status != 200) {
-                alert(json_data_response.data)
-                return false
-            }
-            
-            return true
+        if (typeof obj_en_for[key] == "object") {
+          buffer_ += `${key}: <br><br>`
+          for (pedido of obj_en_for[key]) {
+            buffer_ += mostrar_elementos(pedido)
+          }
+          continue
         }
 
-        // Funcion encargada de mostrar el mensaje de "Operacion reealizada con exito"
-        function operacion_exito(consulta = "") {
+        buffer_ += `${key}: ${obj_en_for[key]}<br>`
+      }
+
+      buffer_ += `</div><br>`
+      return buffer_
+    }
+
+    function check_status_200(json_data_response) {
+      if (json_data_response.status != 200) {
+        alert(json_data_response.data)
+        return false
+      }
+      return true
+    }
+
+    // Funcion encargada de mostrar el mensaje de "Operacion reealizada con exito"
+    function operacion_exito(consulta = "") {
         
-            document.getElementById("formulario_general").innerHTML = `
-            La operación ${consulta.replace("_", " ")} se completó correctamente.`
+        document.getElementById("formulario_general").innerHTML = `
+        La operación ${consulta.replace("_", " ")} se completó correctamente.`
         
+    }
+
+    async function nuevo_cliente(add = false) {
+      let buffer_tmp_objet = {
+        "nombre": document.getElementById("nombre").value,
+        "telefono": document.getElementById("Telefono").value,
+        "email": document.getElementById("email").value,
+        "fecha": document.getElementById("fecha").value,
+        "direccion": document.getElementById("direccion").value,
+        "id": document.getElementById("_id").value
+      }
+
+      let consulta = add ? "agregar_cliente" : "modificar_cliente"
+
+      const response = await fetch('/api/modify_bdd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ "consulta": consulta, "data": buffer_tmp_objet })
+      });
+
+      const response_json = await response.json()
+      if (!check_status_200(response_json)) return
+      realizarConsulta("todos_clientes")
+
+      operacion_exito(consulta)
+      realizarConsulta("todos_clientes")
+
+    }
+
+    async function nuevo_producto(add = false) {
+      let buffer_tmp_objet = {
+        "nombre": document.getElementById("nombre").value,
+        "precio": document.getElementById("precio").value,
+        "stock": document.getElementById("stock").value,
+        "estado": document.getElementById("estado").value,
+        "id": document.getElementById("_id").value
+      }
+
+      let consulta = add ? "agregar_producto" : "modificar_producto"
+
+      const response = await fetch('/api/modify_bdd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ "consulta": consulta, "data": buffer_tmp_objet })
+      });
+
+      const response_json = await response.json()
+      if (!check_status_200(response_json)) return
+      realizarConsulta("todos_productos")
+
+      operacion_exito(consulta)
+      realizarConsulta("todos_productos")
+
+    }
+
+    async function nuevo_pedido(add = false) {
+      // Verificar que haya productos seleccionados si se está agregando un nuevo pedido
+      if (add && cart_cliente.length === 0) {
+        alert("Debes agregar al menos un producto al pedido.");
+        return;
+      }
+
+      let codigo_cliente = document.getElementById("codigo_cliente").value;
+      let metodo_pago = document.getElementById("metodo_pago").value;
+      let fecha_pedido = document.getElementById("fecha_pedido").value;
+      let id_pedido = document.getElementById("_id").value;
+
+      // Calcular el total de la compra
+      let total_compra = 0;
+      for (let item of cart_cliente) {
+        total_compra += item.total_comprado;
+      }
+
+      // Crear el objeto a enviar
+      let buffer_tmp_objet = {
+        codigo_cliente: codigo_cliente,
+        metodo_pago: metodo_pago,
+        fecha_pedido: fecha_pedido,
+        productos: cart_cliente,
+        total_compra: total_compra,
+        id: id_pedido
+      };
+
+      let consulta = add ? "agregar_pedido" : "modificar_pedido";
+
+      // Enviar al backend
+      const response = await fetch('/api/modify_bdd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consulta: consulta, data: buffer_tmp_objet })
+      });
+
+      const response_json = await response.json();
+      if (!check_status_200(response_json)) return;
+
+      // Vaciar el carrito y recargar la vista
+      cart_cliente = [];
+      operacion_exito(consulta);
+      realizarConsulta("todos_pedidos");
+    }
+
+    function cancelarEdicion() {
+      cart_cliente = []
+      document.getElementById("formulario_general").innerHTML = ""
+    }
+
+    function load_client_edit(nombre, telefono, email, direccion, fecha, id, add = false) {
+      let code = `
+      <label>Datos del Cliente</label>
+      <input type="text" id="_id" value="${id}" hidden><br>
+      <input type="text" id="nombre" value="${nombre}" required placeholder="Ej: Juan Pérez"><br>
+      <input type="text" id="Telefono" value="${telefono}" required placeholder="Ej: +56912345678"><br>
+      <input type="text" id="email" value="${email}" required placeholder="Ej: juan@mail.com"><br>
+      <input type="text" id="direccion" value="${direccion}" required placeholder="Ej: Av. Siempre Viva 123"><br>
+      <input type="text" id="fecha" value="${fecha}" required placeholder="Ej: 2025-07-09"><br>`
+
+      code += add
+        ? `<button class="btn-agregar" onclick="nuevo_cliente(true)">Agregar Cliente</button>`
+        : `<button class="btn-modificar" onclick="nuevo_cliente(false)">Modificar Cliente</button>`
+
+      code += `<button class="btn-cancelar" onclick="cancelarEdicion()">Cancelar</button>`
+
+      document.getElementById("formulario_general").innerHTML = code
+    }
+
+    function load_product_edit(nombre, precio, stock, estado, id, add = false) {
+      let code = `
+      <label>Datos del Producto</label>
+      <input type="text" id="_id" value="${id}" hidden><br>
+      <input type="text" id="nombre" value="${nombre}" required placeholder="Ej: Mouse Gamer"><br>
+      <input type="text" id="precio" value="${precio}" required placeholder="Ej: 19990"><br>
+      <input type="text" id="stock" value="${stock}" required placeholder="Ej: 50"><br>
+      <input type="text" id="estado" value="${estado}" required placeholder="Ej: disponible / agotado"><br>`
+
+
+      code += add
+        ? `<button class="btn-agregar" onclick="nuevo_producto(true)">Agregar Producto</button>`
+        : `<button class="btn-modificar" onclick="nuevo_producto(false)">Modificar Producto</button>`
+
+      code += `<button class="btn-cancelar" onclick="cancelarEdicion()">Cancelar</button>`
+
+      document.getElementById("formulario_general").innerHTML = code
+    }
+
+    function add_cart(id_producto) {
+      // Recorre todos los productos para encontrar el seleccionado
+      for (let producto of todos_los_productos["data"]) {
+        if (producto._id === id_producto) {
+          // Verifica si ya está en el carrito
+          let existe = false;
+          for (let p of cart_cliente) {
+            if (p.codigo_producto === producto._id) {
+              existe = true;
+              break;
+            }
+          }
+
+          if (existe) {
+            alert("El producto ya está en el carrito.");
+            return;
+          }
+
+          // Pide al usuario la cantidad a agregar
+          let cantidad_str = prompt("¿Cuántas unidades deseas agregar de " + producto.nombre + "?", "1");
+
+          if (!cantidad_str || isNaN(cantidad_str) || parseInt(cantidad_str) <= 0) {
+            alert("Cantidad inválida.");
+            return;
+          }
+
+          let cantidad = parseInt(cantidad_str);
+          let precio_unitario = parseFloat(producto.precio);
+          let total_comprado = cantidad * precio_unitario;
+
+          // Agrega al carrito
+          cart_cliente.push({
+            codigo_producto: producto._id,
+            nombre: producto.nombre,
+            cantidad: cantidad,
+            precio_unitario: precio_unitario,
+            total_comprado: total_comprado
+          });
+
+          alert("Producto agregado al carrito correctamente.");
+          mostrar_carrito(); // actualiza la vista del carrito
+          break;
+        }
+      }
+    }
+
+    function mostrar_carrito() {
+      let html = "<h4>Productos en el pedido:</h4>";
+      html += "<ul>";
+
+      for (let item of cart_cliente) {
+        html += "<li>" + item.nombre +
+                " - Cantidad: " + item.cantidad +
+                ", Precio Unitario: $" + item.precio_unitario +
+                ", Total: $" + item.total_comprado + "</li>";
+      }
+
+      html += "</ul>";
+
+      // Muestra en el div
+      let contenedor = document.getElementById("carrito_preview");
+      if (contenedor) {
+        contenedor.innerHTML = html;
+      }
+    }
+
+      async function product_in_pedido() {
+        todos_los_productos = await realizarConsulta("todos_productos", true);
+        let html = "<label>Seleccionar Producto:</label><br>";
+
+        for (let producto of todos_los_productos["data"]) {
+          html += "<button type='button' onclick=\"add_cart('" + producto._id + "')\">" +
+                  producto.nombre + "</button><br>";
         }
 
-        async function nuevo_cliente(add = false) {
+        return html;
+      }
 
-            let buffer_tmp_objet = {
-                "nombre": document.getElementById("nombre").value,
-                "telefono": document.getElementById("Telefono").value,
-                "email": document.getElementById("email").value,
-                "fecha": document.getElementById("fecha").value,
-                "direccion": document.getElementById("direccion").value,
-                "id": document.getElementById("_id").value
-            }
 
-            let consulta = ""
-            // Si es que mod es false, se modificara el producto, en caso contrario se creara uno nuevo
-            if (add) {
-                consulta = "agregar_cliente"
-            } else {
-                consulta = "modificar_cliente"
-            }
+    async function load_pedido_edit(codigo_cliente, metodo_pago, fecha_pedido, id, add = false) {
+      let code = `
+      <label>Datos del Pedido</label>
+      <input type="text" id="_id" value="${id}" hidden><br>
+      <input type="text" id="codigo_cliente" value="${codigo_cliente}" required placeholder="Ej: C001"><br>
+      <input type="text" id="metodo_pago" value="${metodo_pago}" required placeholder="Ej: Transferencia / Efectivo"><br>
+      <input type="text" id="fecha_pedido" value="${fecha_pedido}" required placeholder="Ej: 2025-07-09"><br>`
 
-            const response = await fetch('/api/modify_bdd', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
-            });
+      if (add) {
+        code += await product_in_pedido(); // botones para agregar productos
+        code += `<div id="carrito_preview"></div>`; // aquí se muestra el carrito
+        code += `<button class="btn-agregar" onclick="nuevo_pedido(true)">Agregar Pedido</button>`;
 
-            const response_json = await response.json()
+      } else {
+          code += `<button class="btn-modificar" onclick="nuevo_pedido(false)">Modificar Pedido</button>`
+      }
 
-            if (!check_status_200(response_json)) {
-                return
-            }
+      code += `<button class="btn-cancelar" onclick="cancelarEdicion()">Cancelar</button>`
 
-            operacion_exito(consulta)
-            realizarConsulta("todos_clientes")
+      document.getElementById("formulario_general").innerHTML = code
+    }
 
+    async function eliminar_por_id(id, tipo) {
+      const response = await fetch('/api/dinamic_api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ "consulta": `${tipo}_borrar`, "data": id })
+      })
+
+      const response_json = await response.json()
+      if (!check_status_200(response_json)) return
+
+      if (tipo == "cliente") realizarConsulta("todos_clientes")
+      else if (tipo == "producto") realizarConsulta("todos_productos")
+      else if (tipo == "pedido") realizarConsulta("todos_pedidos")
+    }
+
+    document.getElementById('consulta-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const consulta = document.getElementById('consulta').value;
+      const data = document.getElementById('data').value.trim();
+
+      if (!consulta) {
+        alert("Por favor selecciona un tipo de consulta.");
+        return;
+      }
+
+      if (['ciudad', 'fecha', 'producto', 'total_pedidos_cliente'].includes(consulta) && data === "") {
+        alert("Por favor ingresa un dato para la consulta seleccionada.");
+        return;
+      }
+
+      const response = await fetch('/api/dinamic_api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consulta, data })
+      });
+
+      const result = await response.json();
+      if (!check_status_200(result)) return
+
+      let buffer_tmp = "";
+      const resultados = Array.isArray(result.data) ? result.data : [result.data];
+
+      for (let elem of resultados) {
+        let content = mostrar_elementos(elem)
+        buffer_tmp += `
+        <div class="resultado-item">
+          <div class="contenido">${content}</div>
+        </div>`
+      }
+
+      document.getElementById('resultado').innerHTML = buffer_tmp;
+      document.getElementById('data').value = "";
+    });
+
+    async function realizarConsulta(tipo, return_ = false) {
+      const response = await fetch('/api/dinamic_api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consulta: tipo, data: "" })
+      });
+
+      const result = await response.json();
+      if (!check_status_200(result)) return
+      if (return_) return result
+
+      let dinamic_ = "";
+      for (elem of result.data) {
+        const content = mostrar_elementos(elem)
+        let acciones = ""
+
+        if (tipo === "todos_clientes") {
+          acciones = `
+            <button onclick="load_client_edit('${elem.nombre}', '${elem.Telefono}', '${elem.email}', '${elem.direccion}', '${elem.fecha_registro}', '${elem._id}')">Editar</button>
+            <button class="btn-eliminar" onclick="eliminar_por_id('${elem._id}', 'cliente')">Eliminar</button>`
         }
 
-        async function nuevo_producto(add = false) {
-
-            let buffer_tmp_objet = {
-                "nombre": document.getElementById("nombre").value,
-                "precio": document.getElementById("precio").value,
-                "stock": document.getElementById("stock").value,
-                "estado": document.getElementById("estado").value,
-                "id": document.getElementById("_id").value
-            }
-
-            let consulta = ""
-
-            if (add) {
-                consulta = "agregar_producto"
-            } else {
-                consulta = "modificar_producto"
-            }
-
-            const response = await fetch('/api/modify_bdd', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
-            });
-
-            const response_json = await response.json()
-
-            if (!check_status_200(response_json)) {
-                return
-            }
-
-            operacion_exito(consulta)
-            realizarConsulta("todos_productos")
+        if (tipo === "todos_productos") {
+          acciones = `
+            <button onclick="load_product_edit('${elem.nombre}', '${elem.precio}', '${elem.stock}', '${elem.estado}', '${elem._id}')">Editar</button>
+            <button class="btn-eliminar" onclick="eliminar_por_id('${elem._id}', 'producto')">Eliminar</button>`
         }
 
-        async function nuevo_pedido(add = false) {
-            let buffer_tmp_objet = {
-                "codigo_cliente": document.getElementById("codigo_cliente").value,
-                "metodo_pago": document.getElementById("metodo_pago").value,
-                "fecha_pedido": document.getElementById("fecha_pedido").value,
-                "id": document.getElementById("_id").value
-            }
-
-            let consulta = ""
-
-            if (add) {
-                consulta = "agregar_pedido"
-            } else {
-                consulta = "modificar_pedido"
-            }
-
-            const response = await fetch('/api/modify_bdd', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"consulta": consulta, "data": buffer_tmp_objet})
-            });
-
-            const response_json = await response.json()
-
-            if (!check_status_200(response_json)) {
-                return
-            }
-
-            operacion_exito(consulta)
-            realizarConsulta("todos_pedidos")
+        if (tipo === "todos_pedidos") {
+          acciones = `
+            <button onclick="load_pedido_edit('${elem.codigo_cliente}', '${elem.metodo_pago}', '${elem.fecha_pedido}', '${elem._id}')">Editar</button>
+            <button class="btn-eliminar" onclick="eliminar_por_id('${elem._id}', 'pedido')">Eliminar</button>`
         }
 
-        function load_client_edit(nombre, telefono, email, direccion, fecha, id, add = false) {
+        dinamic_ += `
+        <div class="resultado-item">
+          <div class="contenido">${content}</div>
+          <div class="acciones">${acciones}</div>
+        </div>`
+      }
 
-            let code = `
-            <label>Datos del Cliente</label>
+      let nuevoBtn = ""
+      if (tipo === "todos_clientes") {
+        nuevoBtn = `<button onclick="load_client_edit('', '', '', '', '', '', true)">Nuevo Cliente</button>`
+      } else if (tipo === "todos_pedidos") {
+        nuevoBtn = `<button onclick="load_pedido_edit('', '', '', '', true)">Nuevo Pedido</button>`
+      } else if (tipo === "todos_productos") {
+        nuevoBtn = `<button onclick="load_product_edit('', '', '', '', '', true)">Nuevo Producto</button>`
+      }
 
-            <input type="text" id="_id" value="${id}" hidden><br>
-            <input type="text" id="nombre" value="${nombre}" required><br>
-            <input type="text" id="Telefono" value="${telefono}" required><br>
-            <input type="text" id="email" value="${email}" required><br>
-            <input type="text" id="direccion" value="${direccion}" required><br>
-            <input type="text" id="fecha" value="${fecha}" required><br>
-            `
+      document.getElementById('resultado').innerHTML = nuevoBtn + dinamic_
+    }
 
-            if (add) {
-                code += `<button onclick="nuevo_cliente(true)">Agregar Cliente</button>`
-            } else {
-                code += `<button onclick="nuevo_cliente(false)">Modificar Cliente</button>`
-            }
+    // Placeholders dinamicos
+    document.getElementById("consulta").addEventListener("change", function () {
+      const valor = this.value;
+      const input = document.getElementById("data");
 
-            document.getElementById("formulario_general").innerHTML = code
-        }
-
-        function load_product_edit(nombre, precio, stock, estado, id, add = false) {
-            let code = `
-            <label>Datos del Producto</label>
-
-            <input type="text" id="_id" value="${id}" hidden><br>
-            <input type="text" id="nombre" value="${nombre}" required><br>
-            <input type="text" id="precio" value="${precio}" required><br>
-            <input type="text" id="stock" value="${stock}" required><br>
-            <input type="text" id="estado" value="${estado}" required><br>
-            `
-            if (add) {
-                code += `<button onclick="nuevo_producto(true)">Agregar Producto</button>`
-            } else {
-                code += `<button onclick="nuevo_producto(false)">Modificar Producto</button>`
-            }
-        
-            document.getElementById("formulario_general").innerHTML = code
-
-        }
-
-        function load_pedido_edit(codigo_cliente, metodo_pago, fecha_pedido, id, add = false) {
-            let code = `
-            <label>Datos del Pedido</label>
-
-            <input type="text" id="_id" value="${id}" hidden><br>
-            <input type="text" id="codigo_cliente" value="${codigo_cliente}" required><br>
-            <input type="text" id="metodo_pago" value="${metodo_pago}" required><br>
-            <input type="text" id="fecha_pedido" value="${fecha_pedido}" required><br>
-            `
-            
-            if (add) {
-                code += `<button onclick="nuevo_pedido(true)">Agregar Pedido</button>`
-            } else {
-                code += `<button onclick="nuevo_pedido(false)">Modificar Pedido</button>`
-            }
-        
-            document.getElementById("formulario_general").innerHTML = code
-
-        }
-
-        async function eliminar_por_id(id, tipo) {
-            const response = await fetch('/api/dinamic_api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "consulta": `${tipo}_borrar`, "data": id})
-            })
-
-            const response_json = await response.json()
-
-            if (!check_status_200(response_json)) {
-                return
-            }
-
-            if (tipo == "cliente") {
-                realizarConsulta("todos_clientes")
-
-            } else if (tipo == "producto") {
-                realizarConsulta("todos_productos")
-
-            } else if (tipo == "pedido") {
-                realizarConsulta("todos_pedidos")
-            }
-
-        }
-
-        document.getElementById('consulta-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const consulta = document.getElementById('consulta').value;
-            const data = document.getElementById('data').value.trim();
-
-            if (!consulta) {
-                alert("Por favor selecciona un tipo de consulta.");
-                return;
-            }
-
-            if (['ciudad', 'fecha', 'producto', 'total_pedidos_cliente'].includes(consulta) && data === "") {
-                alert("Por favor ingresa un dato para la consulta seleccionada.");
-                return;
-            }
-
-            const response = await fetch('/api/dinamic_api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ consulta, data })
-            });
-
-            const result = await response.json();
-            
-            // Zona nephtali
-
-            if (!check_status_200(result)) {
-                return
-            }
-
-            let buffer_tmp = ""
-            for (elem of result["data"]) {
-                buffer_tmp += mostrar_elementos(elem)
-            }
-
-            document.getElementById('resultado').innerHTML = buffer_tmp;
-            document.getElementById('data').value = ""
-
-        });
-
-        async function realizarConsulta(tipo, return_ = false) {
-            const response = await fetch('/api/dinamic_api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ consulta: tipo, data: "" })
-            });
-
-            const result = await response.json();
-
-            // Zona de nephtali xd
-
-            if (!check_status_200(result)) {
-                return
-            }
-
-            // En caso de necesitar retornar, retorna XD
-            if (return_) {
-                return result
-            }
-
-            let dinamic_ = "";
-            for (elem of result.data) {
-
-                dinamic_ += mostrar_elementos(elem)
-                console.log(elem)
-
-                if (tipo == "todos_clientes") {
-                    dinamic_ += `<button onclick="load_client_edit('${elem.nombre}', '${elem.Telefono}', '${elem.email}', '${elem.direccion}', '${elem.fecha_registro}', '${elem._id}')">Editar</button>`
-                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'cliente')">Eliminar</button>`
-                }
-
-                if (tipo == "todos_pedidos") {
-                    dinamic_ += `<button onclick="load_pedido_edit('${elem.codigo_cliente}', '${elem.metodo_pago}', '${elem.fecha_pedido}', '${elem._id}')">Editar</button>`
-                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'pedido')">Eliminar</button>`
-                }
-
-                if (tipo == "todos_productos") {
-                    dinamic_ += `<button onclick="load_product_edit('${elem.nombre}', '${elem.precio}', '${elem.stock}', '${elem.estado}', '${elem._id}')">Editar</button>`
-                    dinamic_ += `<button onclick="eliminar_por_id('${elem._id}', 'producto')">Eliminar</button>`
-                }
-            }
-
-            if (tipo == "todos_clientes") {
-                document.getElementById("resultado").innerHTML = `<button onclick="load_client_edit('', '', '', '', '', '', true)">Nuevo Cliente</button>`
-            
-            } else if (tipo == "todos_pedidos"){
-                document.getElementById("resultado").innerHTML = `<button onclick="load_pedido_edit('', '', '', '', true)">Nuevo Pedido</button>`
-
-            } else if (tipo == "todos_productos") {
-                document.getElementById("resultado").innerHTML = `<button onclick="load_product_edit('', '', '', '', '', true)">Nuevo Producto</button>`
-            }
-
-
-            document.getElementById('resultado').innerHTML += dinamic_
-
-        }
-    </script>
+      switch (valor) {
+        case "ciudad":
+          input.placeholder = "Ej: Santiago";
+          break;
+        case "fecha":
+          input.placeholder = "Ej: 2025-07-09 (AAAA-MM-DD)";
+          break;
+        case "producto":
+          input.placeholder = "Ej: PD001 (ID del producto)";
+          break;
+        case "total_pedidos_cliente":
+          input.placeholder = "Ej: C001 (ID del cliente)";
+          break;
+        default:
+          input.placeholder = "";
+      }
+    });
+  </script>
 </body>
+</html>
