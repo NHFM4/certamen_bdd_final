@@ -159,7 +159,7 @@ def agregar_cliente(json_data: dict) -> dict:
     telefono = json_data["telefono"]
     direccion = json_data["direccion"]
     email = json_data["email"]
-    fecha_registro = json_data["fecha"]
+    fecha_registro = str(datetime.now().strftime("%Y-%m-%d"))
     nombre = json_data["nombre"]
 
     resp_ = todos_clientes()
@@ -279,6 +279,36 @@ def modificar_stock(id: str, cantidad: int) -> bool:
     
     return True
 
+def aumentar_stock(id) -> dict:
+
+    try:
+        resp_ = pedidos.find_one({"_id": id})
+    except:
+        print("ERROR EN LINEA 282")
+        return {"status": 400, "data": f"No se logro devolver el producto {id}"}
+
+    for producto in resp_["productos"]:
+
+        try:
+            resp_stock_bdd = productos.find_one({"_id": producto["codigo_producto"]})
+
+            if "stock" not in resp_stock_bdd:
+                print("ERROR EN LINEA 296")
+                return {"status": 400, "data": f"No se logro encontrar el producto {id} en la bdd"}
+
+        except:
+            print("ERROR EN LINEA 300")
+            return {"status": 400, "data": f"No se logro encontrar el producto {id} en la bdd"}
+        
+        try:
+            productos.update_one({"_id": producto["codigo_producto"]}, {"$set": {"estado": "disponible", "stock": producto["cantidad"] + resp_stock_bdd["stock"]}})
+
+        except Exception as err:
+            print("ERROR EN LINEA 306", err)
+            return {"status": 400, "data": f"No se logro encontrar el producto {id} en la bdd"}
+    
+    return {"status": 200, "data": "Se logro retornar los objetos"}
+
 def modificar_cliente(json_data: dict) -> dict:
 
     id_cliente = json_data["id"]
@@ -356,6 +386,11 @@ def modificar_pedido(json_data: dict) -> dict:
 # Seccion de eliminacion
 
 def eliminar_cliente_por_id(id: str) -> dict:
+
+    resp_ped = list(pedidos.find({"codigo_cliente": id}))
+
+    if resp_ped:
+        return {"status": 400, "data": "No se puede borrar a un cliente asociado a un pedido."}
     
     try:
         clientes.delete_one({"_id": id})
@@ -369,6 +404,7 @@ def eliminar_cliente_por_id(id: str) -> dict:
 def eliminar_pedido_por_id(id: str) -> dict:
 
     try:
+        aumentar_stock(id)
         pedidos.delete_one({"_id": id})
     
     except:
