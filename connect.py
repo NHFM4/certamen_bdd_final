@@ -11,7 +11,7 @@ clientes = bdd["clientes"]
 pedidos = bdd["pedidos"]
 productos = bdd["productos"]
 
-no_permitido = r"'\"\\/<>(){}[];%*=$+|&`~#"
+no_permitido = r"'\"\\/<>(){}[];%*=$|&`~#"
 
 ######################################################## Limpieza de campos
 
@@ -21,6 +21,30 @@ def es_peligroso(campo: str) -> bool:
 
         if x in no_permitido:
             return True
+    
+    return False
+
+def es_peligroso_json(diccionario: dict) -> bool:
+
+    keys_ = diccionario.keys()
+
+    for x in keys_:
+
+        if x in no_permitido:
+            return True
+    
+    for key in keys_:
+        
+        for x in str(diccionario[key]):
+
+            if type(diccionario[key]) == list:
+                continue
+
+            try:
+                if x in no_permitido:
+                    return True
+            except:
+                continue
     
     return False
 
@@ -236,6 +260,8 @@ def agregar_pedido(json_data: dict) -> dict:
 
     return {"status": 200, "data": f"Pedido asociado al cliente {codigo_cliente} ingresado correctamente."}
 
+# Seccion de modificacion
+
 def modificar_stock(id: str, cantidad: int) -> bool:
 
     estado = "disponible"
@@ -252,10 +278,6 @@ def modificar_stock(id: str, cantidad: int) -> bool:
         return False
     
     return True
-
-
-
-# Seccion de modificacion
 
 def modificar_cliente(json_data: dict) -> dict:
 
@@ -309,6 +331,12 @@ def modificar_pedido(json_data: dict) -> dict:
 
     id_pedido = json_data["id"]
     codigo_cliente = json_data["codigo_cliente"]
+
+    cliente_existe = consultar_pedidos_clientes(codigo_cliente)
+
+    if cliente_existe["status"] != 200:
+        return {"status": 400, "data": "No se puede asociar el pedido a un usario que no existe."}
+
     metodo_pago = json_data["metodo_pago"]
     fecha_pedido = json_data["fecha_pedido"]
 

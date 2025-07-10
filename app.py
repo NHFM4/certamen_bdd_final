@@ -42,7 +42,7 @@ def modify_():
     if "consulta" not in parametros or "data" not in parametros:
         return {"status": 400, "data": "No estas enviando uno de los dos parametros con su respectivo valor."}
 
-    if any(connect.es_peligroso(x) for x in parametros.keys()) or any(connect.es_peligroso(x) for x in parametros["data"].values()):
+    if any(connect.es_peligroso(x) for x in parametros.keys()) or connect.es_peligroso_json(parametros["data"]):
         return {"status": 400, "data": "Estas utilizando caracteres no autorizados."}
     
     if parametros["consulta"] not in modify_bdd:
