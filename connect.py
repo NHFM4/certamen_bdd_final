@@ -13,7 +13,7 @@ productos = bdd["productos"]
 
 no_permitido = r"'\"\\/<>(){}[];%*=$|&`~#"
 
-######################################################## Limpieza de campos
+######################################################## Limpieza de campos y utilidades
 
 def es_peligroso(campo: str) -> bool:
 
